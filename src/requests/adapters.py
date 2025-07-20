@@ -63,6 +63,11 @@ except ImportError:
         raise InvalidSchema("Missing dependencies for SOCKS support.")
 
 
+# Common scheme constants to avoid repeated string operations
+HTTPS_SCHEME = "https"
+SOCKS_SCHEME_PREFIX = "socks"
+
+
 if typing.TYPE_CHECKING:
     from .models import PreparedRequest
 
@@ -253,24 +258,26 @@ class HTTPAdapter(BaseAdapter):
         """
         if proxy in self.proxy_manager:
             manager = self.proxy_manager[proxy]
-        elif proxy.lower().startswith("socks"):
-            username, password = get_auth_from_url(proxy)
-            manager = self.proxy_manager[proxy] = SOCKSProxyManager(
-                proxy,
-                username=username,
-                password=password,
-                num_pools=self._pool_connections,
-                maxsize=self._pool_maxsize,
-                block=self._pool_block,
-                **proxy_kwargs,
-            )
         else:
-            proxy_headers = self.proxy_headers(proxy)
-            manager = self.proxy_manager[proxy] = proxy_from_url(
-                proxy,
-                proxy_headers=proxy_headers,
-                num_pools=self._pool_connections,
-                maxsize=self._pool_maxsize,
+            proxy_lower = proxy.lower()
+            if proxy_lower.startswith(SOCKS_SCHEME_PREFIX):
+                username, password = get_auth_from_url(proxy)
+                manager = self.proxy_manager[proxy] = SOCKSProxyManager(
+                    proxy,
+                    username=username,
+                    password=password,
+                    num_pools=self._pool_connections,
+                    maxsize=self._pool_maxsize,
+                    block=self._pool_block,
+                    **proxy_kwargs,
+                )
+            else:
+                proxy_headers = self.proxy_headers(proxy)
+                manager = self.proxy_manager[proxy] = proxy_from_url(
+                    proxy,
+                    proxy_headers=proxy_headers,
+                    num_pools=self._pool_connections,
+                    maxsize=self._pool_maxsize,
                 block=self._pool_block,
                 **proxy_kwargs,
             )
@@ -289,7 +296,8 @@ class HTTPAdapter(BaseAdapter):
             to a CA bundle to use
         :param cert: The SSL certificate to verify.
         """
-        if url.lower().startswith("https") and verify:
+        url_lower = url.lower()
+        if url_lower.startswith(HTTPS_SCHEME) and verify:
             cert_loc = None
 
             # Allow self-specified cert location.
@@ -541,7 +549,7 @@ class HTTPAdapter(BaseAdapter):
         using_socks_proxy = False
         if proxy:
             proxy_scheme = urlparse(proxy).scheme.lower()
-            using_socks_proxy = proxy_scheme.startswith("socks")
+            using_socks_proxy = proxy_scheme.startswith(SOCKS_SCHEME_PREFIX)
 
         url = request.path_url
         if url.startswith("//"):  # Don't confuse urllib3
