@@ -784,8 +784,9 @@ class Session(SessionRedirectMixin):
 
         :rtype: requests.adapters.BaseAdapter
         """
+        url_lower = url.lower()
         for prefix, adapter in self.adapters.items():
-            if url.lower().startswith(prefix.lower()):
+            if url_lower.startswith(prefix.lower()):
                 return adapter
 
         # Nothing matches :-/

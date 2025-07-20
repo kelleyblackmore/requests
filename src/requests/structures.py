@@ -60,6 +60,16 @@ class CaseInsensitiveDict(MutableMapping):
     def __len__(self):
         return len(self._store)
 
+    def __contains__(self, key):
+        return key.lower() in self._store
+
+    def get(self, key, default=None):
+        """Return the value for key if key is in the dictionary, else default."""
+        try:
+            return self._store[key.lower()][1]
+        except KeyError:
+            return default
+
     def lower_items(self):
         """Like iteritems(), but with all lowercase keys."""
         return ((lowerkey, keyval[1]) for (lowerkey, keyval) in self._store.items())

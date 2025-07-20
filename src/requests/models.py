@@ -78,6 +78,9 @@ REDIRECT_STATI = (
 
 DEFAULT_REDIRECT_LIMIT = 30
 CONTENT_CHUNK_SIZE = 10 * 1024
+
+# Common scheme prefix to avoid repeated string operations
+HTTP_SCHEME_PREFIX = "http"
 ITER_CHUNK_SIZE = 512
 
 
@@ -424,9 +427,11 @@ class PreparedRequest(RequestEncodingMixin, RequestHooksMixin):
         # Don't do any URL preparation for non-HTTP schemes like `mailto`,
         # `data` etc to work around exceptions from `url_parse`, which
         # handles RFC 3986 only.
-        if ":" in url and not url.lower().startswith("http"):
-            self.url = url
-            return
+        if ":" in url:
+            url_lower = url.lower()
+            if not url_lower.startswith(HTTP_SCHEME_PREFIX):
+                self.url = url
+                return
 
         # Support for unicode domain names and paths.
         try:
